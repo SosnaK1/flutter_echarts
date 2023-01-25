@@ -14,20 +14,21 @@ const htmlBase64 =
     'data:text/html;base64,PCFET0NUWVBFIGh0bWw+PGh0bWw+PGhlYWQ+PG1ldGEgY2hhcnNldD0idXRmLTgiPjxtZXRhIG5hbWU9InZpZXdwb3J0IiBjb250ZW50PSJ3aWR0aD1kZXZpY2Utd2lkdGgsIGluaXRpYWwtc2NhbGU9MS4wLCBtYXhpbXVtLXNjYWxlPTEuMCwgbWluaW11bS1zY2FsZT0xLjAsIHVzZXItc2NhbGFibGU9MCwgdGFyZ2V0LWRlbnNpdHlkcGk9ZGV2aWNlLWRwaSIgLz48c3R5bGUgdHlwZT0idGV4dC9jc3MiPmJvZHksaHRtbCwjY2hhcnR7aGVpZ2h0OiAxMDAlO3dpZHRoOiAxMDAlO21hcmdpbjogMHB4O31kaXYgey13ZWJraXQtdGFwLWhpZ2hsaWdodC1jb2xvcjpyZ2JhKDI1NSwyNTUsMjU1LDApO308L3N0eWxlPjwvaGVhZD48Ym9keT48ZGl2IGlkPSJjaGFydCIgLz48L2JvZHk+PC9odG1sPg==';
 
 class Echarts extends StatefulWidget {
-  Echarts(
-      {Key? key,
-      required this.option,
-      this.extraScript = '',
-      this.onMessage,
-      this.extensions = const [],
-      this.theme,
-      this.captureAllGestures = false,
-      this.captureHorizontalGestures = false,
-      this.captureVerticalGestures = false,
-      this.onLoad,
-      this.onWebResourceError,
-      this.reloadAfterInit = false})
-      : super(key: key);
+  Echarts({
+    Key? key,
+    required this.option,
+    this.extraScript = '',
+    this.onMessage,
+    this.extensions = const [],
+    this.theme,
+    this.captureAllGestures = false,
+    this.captureHorizontalGestures = false,
+    this.captureVerticalGestures = false,
+    this.onLoad,
+    this.onInitError,
+    this.onWebResourceError,
+    this.reloadAfterInit = false,
+  }) : super(key: key);
 
   final String option;
 
@@ -46,6 +47,8 @@ class Echarts extends StatefulWidget {
   final bool captureVerticalGestures;
 
   final void Function(WebViewController)? onLoad;
+
+  final void Function(WebViewController, Exception)? onInitError;
 
   final void Function(WebViewController, Exception)? onWebResourceError;
 
@@ -81,13 +84,19 @@ class _EchartsState extends State<Echarts> {
         : '';
     final themeStr =
         this.widget.theme != null ? '\'${this.widget.theme}\'' : 'null';
-    await _controller?.runJavascript('''
+    try {
+      await _controller?.runJavascript('''
       $echartsScript
       $extensionsStr
       var chart = echarts.init(document.getElementById('chart'), $themeStr);
       ${this.widget.extraScript}
       chart.setOption($_currentOption, true);
     ''');
+    } catch (e) {
+      if (_controller != null) {
+        widget.onInitError?.call(_controller!, Exception(e));
+      }
+    }
     if (widget.onLoad != null) {
       widget.onLoad!(_controller!);
     }
